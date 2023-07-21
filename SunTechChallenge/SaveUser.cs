@@ -7,29 +7,45 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using SunTechChallenge.Models.DTO;
+using System.Web.Http;
+using System.Configuration;
+using Microsoft.Azure.Cosmos;
+using Microsoft.AspNetCore.Hosting;
 
 namespace SunTechChallenge
 {
     public static class SaveUser
     {
-        [FunctionName("Function1")]
+        [FunctionName("SaveUser")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
+            [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] UserDto user,
+            [CosmosDB(databaseName:"NoSQLDB", containerName: "MyContainer", Connection = "CosmosDbConnectionString")] IAsyncCollector<Models.User> usersOut,
             ILogger log)
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
 
-            string name = req.Query["name"];
+            try
+            {
+                var newUser = new Models.User
+                {
+                    id = Guid.NewGuid().ToString(),
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    BirthdayInEpoch = user.BirthdayInEpoch
+                };
 
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-            name = name ?? data?.name;
+                await usersOut.AddAsync(newUser);
+            }
+            catch (Exception ex)
+            {
+                log.LogError("Error with SaveUser: {0}", ex.Message);
 
-            string responseMessage = string.IsNullOrEmpty(name)
-                ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
-                : $"Hello, {name}. This HTTP triggered function executed successfully.";
+                return new InternalServerErrorResult();
+            }
 
-            return new OkObjectResult(responseMessage);
+            return new OkResult();
         }
     }
 }
