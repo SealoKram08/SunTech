@@ -19,7 +19,7 @@ namespace SunTechChallenge
     {
         [FunctionName("SaveUser")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] UserDto user,
+            [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] UserDto user,
             [CosmosDB(databaseName:"NoSQLDB", containerName: "MyContainer", Connection = "CosmosDbConnectionString")] IAsyncCollector<Models.User> usersOut,
             ILogger log)
         {
